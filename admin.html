@@ -1,0 +1,79 @@
+<!DOCTYPE html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="robots" content="noindex,nofollow"><title>Админ — Барберхан</title>
+<style>
+:root{--bg:#0d0b09;--card:#17130f;--line:#2b241c;--ink:#f4ede2;--mut:#a89a88;--acc:#f2b705;--ok:#2ecc71;--bad:#e5534b}
+*{box-sizing:border-box}body{margin:0;font:15px/1.5 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--ink);padding:16px 14px calc(30px + env(safe-area-inset-bottom,0px))}
+main{max-width:820px;margin:0 auto}
+h1{font:700 26px Oswald,Impact,sans-serif;text-transform:uppercase;letter-spacing:1px;margin:0}
+h1 span{color:var(--acc)}
+input,button{font:inherit;border-radius:10px;border:1px solid var(--line)}
+input{padding:12px 14px;background:var(--card);color:var(--ink);width:100%;max-width:320px}
+button{cursor:pointer;padding:9px 14px;background:var(--acc);color:#14100b;border:0;font-weight:600}
+button.g{background:#2b241c;color:var(--ink)}button.r{background:var(--bad);color:#fff}button.s{padding:6px 10px;font-size:13px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.top div{display:flex;gap:8px}
+.stats{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.stats div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:12px 14px;color:var(--mut);font-size:13px}.stats b{display:block;font:700 28px Oswald,Impact,sans-serif;color:var(--acc)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;margin:12px 0}
+.card h2{font-size:16px;margin:0 0 8px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.card h2 div{display:flex;gap:6px}
+.new{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc)}
+.r1{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-top:1px solid var(--line)}
+.r1:first-of-type{border-top:0}
+.t{font:700 17px Oswald,Impact,sans-serif;min-width:54px}
+.info{flex:1;min-width:0;font-size:13px;color:var(--mut)}.info b{color:var(--ink);font-size:14px}.info a{color:var(--acc)}
+.bt{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.badge{display:inline-block;border-radius:20px;padding:2px 9px;font-size:11px;font-weight:600;margin-left:6px}
+.b-p{background:rgba(242,183,5,.18);color:var(--acc)}.b-c{background:rgba(46,204,113,.16);color:var(--ok)}.b-b{background:rgba(229,83,75,.16);color:var(--bad)}
+.free{opacity:.75}
+.e{color:var(--bad);min-height:20px}.m{color:var(--mut);font-size:13px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--acc);color:#14100b;padding:10px 18px;border-radius:30px;font-weight:600;opacity:0;pointer-events:none;transition:opacity .3s}
+#toast.on{opacity:1}
+@media(max-width:520px){.r1{flex-wrap:wrap}.bt{width:100%;justify-content:flex-start}}
+</style></head><body><main>
+<div id="lg"><h1>Барберхан <span>· админка</span></h1><p class="m">Вход для администратора</p><input id="pw" type="password" placeholder="Пароль" autocomplete="current-password"> <button id="go">Войти</button><p class="e" id="er"></p></div>
+<div id="ap" style="display:none">
+ <div class="top"><h1>Запись <span>Барберхан</span></h1><div><button class="g s" id="rf">Обновить</button><button class="g s" id="lo">Выйти</button></div></div>
+ <div class="stats"><div><b id="n1">0</b>новых заявок</div><div><b id="n2">0</b>подтверждено</div></div>
+ <div id="pend"></div><div id="days"></div>
+ <p class="m">Данные обновляются каждые 30 секунд. Закрытая ячейка пропадает из записи на сайте. «Отменить» освобождает время для других клиентов.</p>
+</div><div id="toast"></div></main>
+<script>
+var pw="",DATA=null,tm=null,$=function(i){return document.getElementById(i)};
+try{pw=sessionStorage.getItem("bh-adm")||""}catch(e){}
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,function(c){return{"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function api(a){a.password=pw;return fetch("/api/admin",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(a)}).then(function(r){if(r.status==401)throw new Error("auth");if(r.status==429)throw new Error("locked");if(!r.ok)throw new Error("srv");return r.json()})}
+function toast(t){var e=$("toast");e.textContent=t;e.classList.add("on");setTimeout(function(){e.classList.remove("on")},2200)}
+function wa(p,t){var d=String(p).replace(/\D/g,"");if(d.length==10)d="7"+d;else if(d.length==11&&d[0]=="8")d="7"+d.slice(1);return"https://wa.me/"+d+"?text="+encodeURIComponent(t)}
+function fmt(d){return new Date(d+"T00:00:00").toLocaleDateString("ru-RU",{weekday:"short",day:"numeric",month:"long"})}
+function svc(n){return(n||"").split("\n").filter(function(l){return l.indexOf("• ")==0}).map(function(l){return l.slice(2).replace(/ — .*$/,"")}).join(", ")}
+function who(d,h,b){var s=svc(b.note);return'<b>'+esc(b.name)+'</b> · <a href="tel:'+esc(b.phone)+'">'+esc(b.phone)+'</a>'+(s?'<br>'+esc(s):'')}
+function btns(d,h,b){var x='data-d="'+d+'" data-h="'+h+'"',o="";
+ if(b.status!="blocked"){var m="Здравствуйте, "+b.name+"! Ваша запись в Барберхан на "+fmt(d)+" в "+h+":00 "+(b.status=="confirmed"?"подтверждена":"подтверждена")+". Ждём вас!";
+  if(b.status!="confirmed")o+='<button class="s" data-a="confirm" '+x+'>Подтвердить</button>';
+  o+='<a href="'+esc(wa(b.phone,m))+'" target="_blank" rel="noopener"><button class="g s" type="button">WhatsApp</button></a><button class="r s" data-a="free" data-c="1" '+x+'>Отменить</button>'}
+ else o+='<button class="g s" data-a="free" '+x+'>Открыть</button>';return o}
+function render(){
+ var days=DATA.days,pend=[],conf=0,h="";
+ Object.keys(days).forEach(function(d){Object.keys(days[d]).forEach(function(k){var b=days[d][k];if(b.status=="confirmed")conf++;else if(b.status!="blocked")pend.push([d,k,b])})});
+ $("n1").textContent=pend.length;$("n2").textContent=conf;document.title=(pend.length?"("+pend.length+") ":"")+"Админ — Барберхан";
+ $("pend").innerHTML=pend.length?'<div class="card new"><h2>Новые заявки</h2>'+pend.map(function(p){return'<div class="r1"><div class="t">'+p[1]+':00</div><div class="info"><span class="m">'+fmt(p[0])+'</span><br>'+who(p[0],p[1],p[2])+'</div><div class="bt">'+btns(p[0],p[1],p[2])+'</div></div>'}).join("")+'</div>':"";
+ Object.keys(days).forEach(function(d){
+  h+='<div class="card"><h2>'+fmt(d)+'<div><button class="g s" data-a="blockday" data-d="'+d+'" data-c="Закрыть весь день?">Закрыть день</button><button class="g s" data-a="freeday" data-d="'+d+'">Открыть день</button></div></h2>';
+  for(var t=10;t<=20;t++){var b=days[d][t];
+   if(!b)h+='<div class="r1 free"><div class="t">'+t+':00</div><div class="info">свободно</div><div class="bt"><button class="g s" data-a="block" data-d="'+d+'" data-h="'+t+'">Закрыть</button></div></div>';
+   else{var st=b.status=="blocked"?'<span class="badge b-b">закрыто</span>':(b.status=="confirmed"?'<span class="badge b-c">подтверждена</span>':'<span class="badge b-p">ждёт подтверждения</span>');
+    h+='<div class="r1"><div class="t">'+t+':00</div><div class="info">'+(b.status=="blocked"?'закрыто вручную':who(d,t,b))+st+'</div><div class="bt">'+btns(d,t,b)+'</div></div>'}}
+  h+='</div>'});
+ $("days").innerHTML=h}
+function load(quiet){return api({action:"list"}).then(function(j){DATA=j;$("lg").style.display="none";$("ap").style.display="block";render()}).catch(function(e){
+ if(quiet&&e.message=="srv")return;$("ap").style.display="none";$("lg").style.display="block";
+ $("er").textContent=e.message=="auth"?"Неверный пароль":e.message=="locked"?"Слишком много попыток, подождите 15 минут":"Сервер недоступен";pw=""})}
+$("go").onclick=function(){pw=$("pw").value;try{sessionStorage.setItem("bh-adm",pw)}catch(e){}load();clearInterval(tm);tm=setInterval(function(){if(!document.hidden&&pw)load(true)},30000)};
+$("pw").addEventListener("keydown",function(e){if(e.key=="Enter")$("go").click()});
+$("rf").onclick=function(){load().then(function(){toast("Обновлено")})};
+$("lo").onclick=function(){try{sessionStorage.removeItem("bh-adm")}catch(e){}pw="";clearInterval(tm);$("ap").style.display="none";$("lg").style.display="block"};
+document.addEventListener("click",function(e){var b=e.target.closest("button[data-a]");if(!b)return;
+ var c=b.getAttribute("data-c");if(c&&!confirm(c==="1"?"Отменить запись? Время освободится для других клиентов.":c))return;
+ b.disabled=true;api({action:b.getAttribute("data-a"),date:b.getAttribute("data-d"),hour:b.getAttribute("data-h")}).then(function(){return load(true)}).then(function(){toast("Готово")}).catch(function(){toast("Ошибка, попробуйте ещё раз");b.disabled=false})});
+if(pw){load();tm=setInterval(function(){if(!document.hidden&&pw)load(true)},30000)}
+</script></body></html>
